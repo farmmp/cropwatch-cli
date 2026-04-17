@@ -1,53 +1,39 @@
-"""CLI entry points for cropwatch."""
-
-from __future__ import annotations
-
+"""Main CLI entry point for cropwatch."""
 import click
-
-from cropwatch.cache import clear_cache, get_cached, set_cached
+from cropwatch.usda_client import UsdaClient, UsdaClientError
 from cropwatch.config import get_api_key
 from cropwatch.formatter import format_crop_progress, format_simple_table
-from cropwatch.history import clear_history, load_history, record_query
-from cropwatch.usda_client import UsdaClient, UsdaClientError
+from cropwatch.history import record_query
+from cropwatch.cli_alerts import alerts_group
+from cropwatch.cli_compare import compare_group
+from cropwatch.cli_trend import trend_group
 
 
 @click.group()
-def cli() -> None:
-    """CropWatch — USDA crop progress in your terminal."""
+def cli():
+    """CropWatch — USDA crop progress reports in your terminal."""
 
 
 @cli.command()
-@click.argument("commodity", default="CORN")
-@click.option("--year", default=2024, show_default=True, help="Crop year.")
-@click.option("--state", default=None, help="Two-letter state abbreviation.")
-@click.option("--simple", is_flag=True, help="Plain table output.")
-def progress(
-    commodity: str,
-    year: int,
-    state: str | None,
-    simple: bool,
-) -> None:
-    """Fetch and display crop progress data."""
+@click.option("--crop", default="CORN", show_default=True, help="Crop name.")
+@click.option("--state", default=None, help="State abbreviation.")
+@click.option("--simple", is_flag=True, help="Simple table output.")
+def progress(crop, state, simple):
+    """Fetch and display current crop progress."""
     api_key = get_api_key()
     if not api_key:
-        raise click.ClickException("No API key configured. Set USDA_API_KEY or run 'cropwatch config'")
-
-    cache_key = f"{commodity}:{year}:{state}"
-    data = get_cached(cache_key)
-    if data is None:
-        try:
-            client = UsdaClient(api_key=api_key)
-            data = client.get_crop_progress(commodity=commodity, year=year, state=state)
-        except UsdaClientError as exc:
-            raise click.ClickException(str(exc)) from exc
-        set_cached(cache_key, data)
-
+        click.echo("Error: No API key configured.")
+        raise SystemExit(1)
+    client = UsdaClient(api_key=api_key)
+    try:
+        data = client.get_crop_progress(commodity_desc=crop, state_alpha=state)
+    except UsdaClientError as exc:
+        click.echo(f"API error: {exc}")
+        raise SystemExit(1)
     if not data:
-        click.echo("No data found for the given parameters.")
+        click.echo("No data returned.")
         return
-
-    record_query(commodity, year, state, len(data))
-
+    record_query(crop, state)
     if simple:
         click.echo(format_simple_table(data))
     else:
@@ -55,33 +41,42 @@ def progress(
 
 
 @cli.command()
-def ping() -> None:
+def ping():
     """Check API connectivity."""
     api_key = get_api_key()
     if not api_key:
-        raise click.ClickException("No API key configured.")
-    click.echo("API key present. Connectivity check passed.")
+        click.echo("Error: No API key configured.")
+        raise SystemExit(1)
+    client = UsdaClient(api_key=api_key)
+    try:
+        data = client.get_crop_progress(commodity_desc="CORN")
+        click.echo(f"OK — {len(data)} records fetched.")
+    except UsdaClientError as exc:
+        click.echo(f"FAIL — {exc}")
+        raise SystemExit(1)
 
 
 @cli.command("history")
-@click.option("--clear", "do_clear", is_flag=True, help="Clear all history.")
-def history_cmd(do_clear: bool) -> None:
-    """Show or clear past query history."""
-    if do_clear:
-        clear_history()
-        click.echo("History cleared.")
-        return
+def history_cmd():
+    """Show recent query history."""
+    from cropwatch.history import load_history
     entries = load_history()
     if not entries:
-        click.echo("No history recorded yet.")
+        click.echo("No history yet.")
         return
     for e in entries:
-        state_label = e.get("state") or "national"
-        click.echo(
-            f"{e['timestamp']}  {e['commodity']:<12} {e['year']}  "
-            f"{state_label:<10}  {e['result_count']} records"
-        )
+        state = e.get("state") or "national"
+        click.echo(f"{e['timestamp']}  {e['crop']}  ({state})")
 
 
-def main() -> None:
+cli.add_command(alerts_group)
+cli.add_command(compare_group)
+cli.add_command(trend_group)
+
+
+def main():
     cli()
+
+
+if __name__ == "__main__":
+    main()
