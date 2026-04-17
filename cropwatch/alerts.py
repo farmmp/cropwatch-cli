@@ -51,6 +51,24 @@ def save_alert(commodity: str, metric: str, threshold: float,
     return rule
 
 
+def delete_alert(index: int, path: Path | None = None) -> dict[str, Any]:
+    """Remove a single alert rule by its zero-based index.
+
+    Returns the removed rule.
+    Raises AlertError if the index is out of range.
+    """
+    p = _alerts_path(path)
+    alerts = load_alerts(path)
+    if not 0 <= index < len(alerts):
+        raise AlertError(
+            f"Alert index {index} is out of range (0-{len(alerts) - 1})." if alerts
+            else "No alert rules are saved."
+        )
+    removed = alerts.pop(index)
+    p.write_text(json.dumps(alerts, indent=2))
+    return removed
+
+
 def check_alerts(data: list[dict[str, Any]],
                  path: Path | None = None) -> list[dict[str, Any]]:
     """Check data rows against saved alert rules.
