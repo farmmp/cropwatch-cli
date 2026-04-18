@@ -46,7 +46,7 @@ def ping():
     """Check API connectivity."""
     api_key = get_api_key()
     if not api_key:
-        click.echo(" err=True)
+        click.echo("Error: No API key configured.", err=True)
         raise SystemExit(1)
     click.echo("OK")
 
