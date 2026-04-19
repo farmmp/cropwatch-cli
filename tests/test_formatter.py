@@ -57,6 +57,12 @@ def test_bar_half():
     assert result.count("░") == 15
 
 
+def test_bar_length_always_30():
+    """Bar should always be exactly 30 characters regardless of input value."""
+    for value in [0, 1, 25, 50, 75, 99, 100]:
+        assert len(_bar(value)) == 30, f"_bar({value}) length != 30"
+
+
 def test_format_crop_progress_contains_header():
     output = format_crop_progress(SAMPLE_DATA, "corn", 2023)
     assert "Crop Progress: Corn (2023)" in output
@@ -76,6 +82,13 @@ def test_format_crop_progress_case_insensitive():
     output_lower = format_crop_progress(SAMPLE_DATA, "corn", 2023)
     output_upper = format_crop_progress(SAMPLE_DATA, "CORN", 2023)
     assert output_lower == output_upper
+
+
+def test_format_crop_progress_contains_conditions():
+    """All five condition labels should appear in the output."""
+    output = format_crop_progress(SAMPLE_DATA, "corn", 2023)
+    for condition in ["Excellent", "Good", "Fair", "Poor", "Very Poor"]:
+        assert condition in output, f"Expected condition '{condition}' in output"
 
 
 def test_format_simple_table_headers():
