@@ -84,3 +84,11 @@ def test_show_volatility_state_option(runner):
         result = runner.invoke(volatility_group, ["show", "--state", "IA"])
     assert result.exit_code == 0
     assert "IA" in result.output
+
+
+def test_show_volatility_empty_records(runner):
+    """Verify that an empty record list is handled gracefully."""
+    with _patch_key(), _patch_client([]):
+        result = runner.invoke(volatility_group, ["show"])
+    assert result.exit_code != 0
+    assert "Volatility error" in result.output
