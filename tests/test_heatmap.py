@@ -44,6 +44,13 @@ def test_build_heatmap_wrong_week_raises():
         build_heatmap(RECORDS, "CORN", "2024-01-01")
 
 
+def test_build_heatmap_values_are_floats():
+    """Ensure all values returned by build_heatmap are floats, not strings."""
+    result = build_heatmap(RECORDS, "CORN", "2024-05-05")
+    for state, value in result.items():
+        assert isinstance(value, float), f"Expected float for {state}, got {type(value)}"
+
+
 def test_format_heatmap_contains_states():
     sv = {"IA": 72.0, "IL": 55.0, "NE": 90.0}
     out = format_heatmap(sv, title="CORN Progress")
@@ -58,6 +65,13 @@ def test_format_heatmap_contains_range():
     assert "Range:" in out
     assert "55.0" in out
     assert "72.0" in out
+
+
+def test_format_heatmap_title_displayed():
+    """Ensure a provided title appears in the formatted output."""
+    sv = {"IA": 72.0, "NE": 90.0}
+    out = format_heatmap(sv, title="CORN Progress")
+    assert "CORN Progress" in out
 
 
 def test_format_heatmap_empty_raises():
