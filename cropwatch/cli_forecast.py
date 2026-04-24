@@ -26,6 +26,10 @@ def predict(commodity: str, year: int, state: str | None, weeks_ahead: int, api_
         click.echo("Error: --weeks-ahead must be at least 1.", err=True)
         raise SystemExit(1)
 
+    if weeks_ahead > 52:
+        click.echo("Error: --weeks-ahead cannot exceed 52 (one full season).", err=True)
+        raise SystemExit(1)
+
     key = api_key or get_api_key()
     if not key:
         click.echo("Error: No API key configured. Set USDA_API_KEY or run `cropwatch config set-key`.", err=True)
