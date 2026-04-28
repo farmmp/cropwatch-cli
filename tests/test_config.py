@@ -49,3 +49,10 @@ def test_get_api_key_falls_back_to_file(tmp_config, monkeypatch):
     monkeypatch.delenv("USDA_API_KEY", raising=False)
     cfg.save_config({"api_key": "filekey", "default_state": None, "default_year": None, "bar_width": 30})
     assert cfg.get_api_key() == "filekey"
+
+
+def test_get_api_key_returns_none_when_not_set(tmp_config, monkeypatch):
+    """get_api_key should return None when neither env var nor file key is set."""
+    monkeypatch.delenv("USDA_API_KEY", raising=False)
+    # Ensure config file has no api_key set (use defaults)
+    assert cfg.get_api_key() is None
